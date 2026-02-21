@@ -28,6 +28,10 @@ class LedgerService:
         return account
 
     async def get_account_balance(self, account_id: UUID) -> Decimal:
+        """
+        Calculates the aggregate balance for an account by summing all ledger entries.
+        Credits increase balance, debits decrease balance.
+        """
         # Sum of credits - Sum of debits? Or simple sum if debits are negative?
         # Typically in double entry: 
         # Assets = Debits (positive)
@@ -56,6 +60,9 @@ class LedgerService:
         return total_credits - total_debits
 
     async def get_account(self, account_id: UUID) -> Account:
+        """
+        Retrieves account metadata by its unique UUID.
+        """
         query = select(Account).where(Account.id == account_id)
         result = await self.db.execute(query)
         account = result.scalar_one_or_none()
@@ -64,6 +71,10 @@ class LedgerService:
         return account
 
     async def process_transfer(self, transaction_in: TransactionCreate):
+        """
+        Processes an atomic transfer between two accounts with currency validation 
+        and sufficient funds checking. Support for idempotency is included.
+        """
         # Validation
         if transaction_in.type != TransactionType.TRANSFER:
              raise HTTPException(status_code=400, detail="Invalid transaction type for transfer")
