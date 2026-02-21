@@ -104,9 +104,6 @@ class LedgerService:
             source_account = await self.get_account(transaction_in.source_account_id)
             dest_account = await self.get_account(transaction_in.destination_account_id)
 
-            if not source_account or not dest_account:
-                raise HTTPException(status_code=404, detail="Account not found")
-
             if source_account.currency != dest_account.currency:
                  raise HTTPException(status_code=400, detail="Currency mismatch")
 
@@ -183,8 +180,6 @@ class LedgerService:
 
         try:
             dest_account = await self.get_account(transaction_in.destination_account_id)
-            if not dest_account:
-                raise HTTPException(status_code=404, detail="Account not found")
 
             transaction = Transaction(
                 type=TransactionType.DEPOSIT,
@@ -262,8 +257,6 @@ class LedgerService:
 
         try:
             source_account = await self.get_account(transaction_in.source_account_id)
-            if not source_account:
-                raise HTTPException(status_code=404, detail="Account not found")
             
             current_balance = await self.get_account_balance(source_account.id)
             if current_balance < transaction_in.amount:
