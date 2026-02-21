@@ -21,4 +21,5 @@ ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
 # Command to run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use the PORT environment variable provided by Render/Railway
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
