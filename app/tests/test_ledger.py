@@ -187,3 +187,41 @@ async def test_transaction_atomicity(client: AsyncClient):
     resp_b = await client.get(f"/api/accounts/{id_b}")
     assert float(resp_b.json()["balance"]) == 0.00
 
+async def test_account_not_found(client: AsyncClient):
+    # Test deposit to non-existent account
+    random_id = uuid.uuid4()
+    resp = await client.post("/api/deposits", json={
+        "type": "DEPOSIT",
+        "amount": 100.00,
+        "destination_account_id": str(random_id),
+        "idempotency_key": f"not-found-{random_id}"
+    })
+    assert resp.status_code == 404
+    assert resp.json()["detail"] == "Account not found"
+
+async def test_currency_mismatch(client: AsyncClient):
+    # Setup USD and EUR accounts
+    resp_usd = await client.post("/api/accounts", json={"name": "USD Account", "currency": "USD"})
+    id_usd = resp_usd.json()["id"]
+    resp_eur = await client.post("/api/accounts", json={"name": "EUR Account", "currency": "EUR"})
+    id_eur = resp_eur.json()["id"]
+
+    # Fund USD account
+    await client.post("/api/deposits", json={
+        "type": "DEPOSIT",
+        "amount": 100.00,
+        "destination_account_id": id_usd,
+        "idempotency_key": "fund-usd"
+    })
+
+    # Try transfer to EUR account
+    resp = await client.post("/api/transfers", json={
+        "type": "TRANSFER",
+        "amount": 50.00,
+        "source_account_id": id_usd,
+        "destination_account_id": id_eur,
+        "idempotency_key": "mismatch-transfer"
+    })
+    assert resp.status_code == 400
+    assert "Currency mismatch" in resp.json()["detail"]
+
