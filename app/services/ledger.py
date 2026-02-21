@@ -29,6 +29,7 @@ class LedgerService:
         self.db.add(account)
         await self.db.commit()
         await self.db.refresh(account)
+        logger.info(f"Created account: {account.name} (ID: {account.id})")
         return account
 
     async def get_account_balance(self, account_id: UUID) -> Decimal:
