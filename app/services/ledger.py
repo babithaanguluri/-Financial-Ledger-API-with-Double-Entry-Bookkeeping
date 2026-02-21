@@ -150,6 +150,10 @@ class LedgerService:
         return result.scalar_one()
 
     async def process_deposit(self, transaction_in: TransactionCreate):
+        """
+        Processes a deposit into an account by creating a credit entry and 
+        a balancing debit entry for the SYSTEM_VAULT.
+        """
         if transaction_in.type != TransactionType.DEPOSIT:
             raise HTTPException(status_code=400, detail="Invalid transaction type")
         if not transaction_in.destination_account_id:
@@ -222,6 +226,10 @@ class LedgerService:
         return result.scalar_one()
 
     async def process_withdrawal(self, transaction_in: TransactionCreate):
+        """
+        Processes a withdrawal from an account by creating a debit entry and 
+        a balancing credit entry for the SYSTEM_VAULT.
+        """
         if transaction_in.type != TransactionType.WITHDRAWAL:
             raise HTTPException(status_code=400, detail="Invalid transaction type")
         if not transaction_in.source_account_id:
@@ -298,6 +306,9 @@ class LedgerService:
         return result.scalar_one()
 
     async def get_ledger_entries(self, account_id: UUID):
+        """
+        Returns all ledger entries associated with a specific account ID.
+        """
          query = select(LedgerEntry).where(LedgerEntry.account_id == account_id).order_by(LedgerEntry.created_at)
          result = await self.db.execute(query)
          return result.scalars().all()
