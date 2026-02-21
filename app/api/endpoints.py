@@ -34,8 +34,6 @@ async def create_account(account: AccountCreate, db: AsyncSession = Depends(get_
 async def get_account(account_id: UUID, db: AsyncSession = Depends(get_db)):
     service = LedgerService(db)
     account = await service.get_account(account_id)
-    if not account:
-        raise HTTPException(status_code=404, detail="Account not found")
     
     balance = await service.get_account_balance(account_id)
     
@@ -51,9 +49,7 @@ async def get_account(account_id: UUID, db: AsyncSession = Depends(get_db)):
 @router.get("/accounts/{account_id}/ledger", response_model=List[LedgerEntryResponse])
 async def get_account_ledger(account_id: UUID, db: AsyncSession = Depends(get_db)):
     service = LedgerService(db)
-    account = await service.get_account(account_id)
-    if not account:
-        raise HTTPException(status_code=404, detail="Account not found")
+    await service.get_account(account_id)
         
     entries = await service.get_ledger_entries(account_id)
     return entries
