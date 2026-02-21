@@ -9,10 +9,16 @@ from app.models import AccountStatus, TransactionType, TransactionStatus, EntryT
 
 # Account Schemas
 class AccountCreate(BaseModel):
+    """
+    Schema for creating a new account.
+    """
     name: str
     currency: str = "USD"
 
 class AccountResponse(BaseModel):
+    """
+    Detailed account information including current balance.
+    """
     id: UUID
     name: str
     currency: str
@@ -25,6 +31,9 @@ class AccountResponse(BaseModel):
 
 # Ledger Entry Schemas
 class LedgerEntryResponse(BaseModel):
+    """
+    Schema for a single debit or credit entry in the ledger.
+    """
     id: UUID
     transaction_id: UUID
     account_id: UUID
@@ -37,6 +46,10 @@ class LedgerEntryResponse(BaseModel):
 
 # Transaction Schemas
 class TransactionCreate(BaseModel):
+    """
+    Universal schema for ledger transactions (Transfers, Deposits, Withdrawals).
+    Includes mandatory idempotency key.
+    """
     type: TransactionType
     amount: Decimal = Field(..., gt=0)
     description: Optional[str] = None
@@ -53,6 +66,9 @@ class TransactionCreate(BaseModel):
         return v
 
 class TransactionResponse(BaseModel):
+    """
+    Transaction record including the resulting ledger entries.
+    """
     id: UUID
     type: TransactionType
     status: TransactionStatus
