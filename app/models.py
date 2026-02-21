@@ -18,20 +18,24 @@ from sqlalchemy.orm import relationship, declarative_base
 Base = declarative_base()
 
 class AccountStatus(str, enum.Enum):
+    """Possible states for a financial account."""
     ACTIVE = "ACTIVE"
     FROZEN = "FROZEN"
 
 class TransactionType(str, enum.Enum):
+    """Categorization of financial operations."""
     TRANSFER = "TRANSFER"
     DEPOSIT = "DEPOSIT"
     WITHDRAWAL = "WITHDRAWAL"
 
 class TransactionStatus(str, enum.Enum):
+    """The lifecycle state of a transaction."""
     PENDING = "PENDING"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
 
 class EntryType(str, enum.Enum):
+    """Double-entry bookkeepping record types."""
     DEBIT = "DEBIT"
     CREDIT = "CREDIT"
 
