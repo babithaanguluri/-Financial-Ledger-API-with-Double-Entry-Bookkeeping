@@ -78,6 +78,8 @@ class LedgerService:
         # Validation
         if transaction_in.type != TransactionType.TRANSFER:
              raise HTTPException(status_code=400, detail="Invalid transaction type for transfer")
+        if transaction_in.amount <= 0:
+            raise HTTPException(status_code=400, detail="Transaction amount must be positive")
         if not transaction_in.source_account_id or not transaction_in.destination_account_id:
             raise HTTPException(status_code=400, detail="Source and destination accounts required")
         
