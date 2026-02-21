@@ -68,12 +68,14 @@ class LedgerService:
     async def get_account(self, account_id: UUID) -> Account:
         """
         Retrieves account metadata by its unique UUID.
+        Raises HTTPException 404 if the account does not exist.
         """
         query = select(Account).where(Account.id == account_id)
         result = await self.db.execute(query)
         account = result.scalar_one_or_none()
         if not account:
-            return None
+            logger.warning(f"Account lookup failed: {account_id}")
+            raise HTTPException(status_code=404, detail="Account not found")
         return account
 
     async def process_transfer(self, transaction_in: TransactionCreate):
