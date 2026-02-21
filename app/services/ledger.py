@@ -1,4 +1,3 @@
-
 from uuid import UUID
 from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -225,6 +224,7 @@ class LedgerService:
 
             transaction.status = TransactionStatus.COMPLETED
             await self.db.commit()
+            logger.info(f"Deposit successful: {transaction_in.amount} to {dest_account.id} (TX: {transaction.id})")
 
         except HTTPException:
             await self.db.rollback()
@@ -307,6 +307,7 @@ class LedgerService:
             
             transaction.status = TransactionStatus.COMPLETED
             await self.db.commit()
+            logger.info(f"Withdrawal successful: {transaction_in.amount} from {source_account.id} (TX: {transaction.id})")
 
         except HTTPException:
             await self.db.rollback()
