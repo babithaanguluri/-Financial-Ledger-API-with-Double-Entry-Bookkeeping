@@ -61,8 +61,10 @@ class LedgerService:
         )
         result_debits = await self.db.execute(query_debits)
         total_debits = result_debits.scalar() or Decimal(0)
-
-        return total_credits - total_debits
+        
+        balance = total_credits - total_debits
+        logger.debug(f"Retrieved balance for {account_id}: {balance}")
+        return balance
 
     async def get_account(self, account_id: UUID) -> Account:
         """
