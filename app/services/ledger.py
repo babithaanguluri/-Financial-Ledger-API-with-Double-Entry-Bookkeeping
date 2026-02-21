@@ -11,6 +11,12 @@ logger = logging.getLogger(__name__)
 
 from app.models import Account, Transaction, LedgerEntry, AccountStatus, TransactionStatus, EntryType, TransactionType
 from app.schemas import AccountCreate, TransactionCreate
+from app.exceptions import (
+    AccountNotFoundError, 
+    CurrencyMismatchError, 
+    InsufficientFundsError, 
+    InvalidAmountError
+)
 
 class LedgerService:
     def __init__(self, db: AsyncSession):
@@ -36,15 +42,6 @@ class LedgerService:
         Calculates the aggregate balance for an account by summing all ledger entries.
         Credits increase balance, debits decrease balance.
         """
-        # Sum of credits - Sum of debits? Or simple sum if debits are negative?
-        # Typically in double entry: 
-        # Assets = Debits (positive)
-        # Liabilities/Equity = Credits (positive)
-        # But for a simple bank account view: Balance = Credits - Debits
-        # Let's assume:
-        # Credit = Increase balance (Deposit)
-        # Debit = Decrease balance (Withdrawal)
-        
         # Calculate total credits
         query_credits = select(func.sum(LedgerEntry.amount)).where(
             LedgerEntry.account_id == account_id,
@@ -68,14 +65,14 @@ class LedgerService:
     async def get_account(self, account_id: UUID) -> Account:
         """
         Retrieves account metadata by its unique UUID.
-        Raises HTTPException 404 if the account does not exist.
+        Raises AccountNotFoundError if the account does not exist.
         """
         query = select(Account).where(Account.id == account_id)
         result = await self.db.execute(query)
         account = result.scalar_one_or_none()
         if not account:
             logger.warning(f"Account lookup failed: {account_id}")
-            raise HTTPException(status_code=404, detail="Account not found")
+            raise AccountNotFoundError()
         return account
 
     async def process_transfer(self, transaction_in: TransactionCreate):
@@ -87,7 +84,7 @@ class LedgerService:
         if transaction_in.type != TransactionType.TRANSFER:
              raise HTTPException(status_code=400, detail="Invalid transaction type for transfer")
         if transaction_in.amount <= 0:
-            raise HTTPException(status_code=400, detail="Transaction amount must be positive")
+            raise InvalidAmountError()
         if not transaction_in.source_account_id or not transaction_in.destination_account_id:
             raise HTTPException(status_code=400, detail="Source and destination accounts required")
         
@@ -105,12 +102,12 @@ class LedgerService:
             dest_account = await self.get_account(transaction_in.destination_account_id)
 
             if source_account.currency != dest_account.currency:
-                 raise HTTPException(status_code=400, detail="Currency mismatch")
+                 raise CurrencyMismatchError()
 
             # Check sufficient funds
             current_balance = await self.get_account_balance(source_account.id)
             if current_balance < transaction_in.amount:
-                raise HTTPException(status_code=400, detail="Insufficient funds")
+                raise InsufficientFundsError()
 
             # Create Transaction
             transaction = Transaction(
@@ -124,14 +121,12 @@ class LedgerService:
             await self.db.flush() # Get ID
 
             # Create Ledger Entries
-            # Debit Source (Decrease)
             debit_entry = LedgerEntry(
                 transaction_id=transaction.id,
                 account_id=source_account.id,
                 type=EntryType.DEBIT,
                 amount=transaction_in.amount
             )
-            # Credit Destination (Increase)
             credit_entry = LedgerEntry(
                 transaction_id=transaction.id,
                 account_id=dest_account.id,
@@ -145,14 +140,13 @@ class LedgerService:
             await self.db.commit()
             logger.info(f"Transfer successful: {transaction_in.amount} {source_account.currency} from {source_account.id} to {dest_account.id} (TX: {transaction.id})")
             
-        except HTTPException:
+        except LedgerError:
             await self.db.rollback()
             raise
         except Exception:
             await self.db.rollback()
             raise
 
-        # Load entries for response after commit
         query = select(Transaction).options(selectinload(Transaction.entries)).where(Transaction.id == transaction.id)
         result = await self.db.execute(query)
         return result.scalar_one()
@@ -165,11 +159,9 @@ class LedgerService:
         if transaction_in.type != TransactionType.DEPOSIT:
             raise HTTPException(status_code=400, detail="Invalid transaction type")
         if transaction_in.amount <= 0:
-            raise HTTPException(status_code=400, detail="Transaction amount must be positive")
-        if not transaction_in.destination_account_id:
-            raise HTTPException(status_code=400, detail="Destination account required")
+            raise InvalidAmountError()
         
-        # Idempotency check
+        # Idempotency Check
         existing_tx_query = select(Transaction).where(Transaction.idempotency_key == transaction_in.idempotency_key)
         existing_tx_result = await self.db.execute(existing_tx_query)
         existing_tx = existing_tx_result.scalar_one_or_none()
@@ -191,7 +183,6 @@ class LedgerService:
             self.db.add(transaction)
             await self.db.flush()
 
-            # Credit Destination (Increase)
             credit_entry = LedgerEntry(
                 transaction_id=transaction.id,
                 account_id=dest_account.id,
@@ -199,7 +190,6 @@ class LedgerService:
                 amount=transaction_in.amount
             )
             
-            # Create a SYSTEM account for balancing.
             system_account_query = select(Account).where(Account.name == "SYSTEM_VAULT")
             result = await self.db.execute(system_account_query)
             system_account = result.scalar_one_or_none()
@@ -223,7 +213,7 @@ class LedgerService:
             await self.db.commit()
             logger.info(f"Deposit successful: {transaction_in.amount} to {dest_account.id} (TX: {transaction.id})")
 
-        except HTTPException:
+        except LedgerError:
             await self.db.rollback()
             raise
         except Exception:
@@ -242,11 +232,9 @@ class LedgerService:
         if transaction_in.type != TransactionType.WITHDRAWAL:
             raise HTTPException(status_code=400, detail="Invalid transaction type")
         if transaction_in.amount <= 0:
-            raise HTTPException(status_code=400, detail="Transaction amount must be positive")
-        if not transaction_in.source_account_id:
-             raise HTTPException(status_code=400, detail="Source account required")
+            raise InvalidAmountError()
         
-        # Idempotency check
+        # Idempotency Check
         existing_tx_query = select(Transaction).where(Transaction.idempotency_key == transaction_in.idempotency_key)
         existing_tx_result = await self.db.execute(existing_tx_query)
         existing_tx = existing_tx_result.scalar_one_or_none()
@@ -260,7 +248,7 @@ class LedgerService:
             
             current_balance = await self.get_account_balance(source_account.id)
             if current_balance < transaction_in.amount:
-                 raise HTTPException(status_code=400, detail="Insufficient funds")
+                 raise InsufficientFundsError()
 
             transaction = Transaction(
                 type=TransactionType.WITHDRAWAL,
@@ -272,7 +260,6 @@ class LedgerService:
             self.db.add(transaction)
             await self.db.flush()
 
-            # Debit Source (Decrease)
             debit_entry = LedgerEntry(
                 transaction_id=transaction.id,
                 account_id=source_account.id,
@@ -280,7 +267,6 @@ class LedgerService:
                 amount=transaction_in.amount
             )
             
-            # Credit System (Increase vault)
             system_account_query = select(Account).where(Account.name == "SYSTEM_VAULT")
             result = await self.db.execute(system_account_query)
             system_account = result.scalar_one_or_none()
@@ -304,7 +290,7 @@ class LedgerService:
             await self.db.commit()
             logger.info(f"Withdrawal successful: {transaction_in.amount} from {source_account.id} (TX: {transaction.id})")
 
-        except HTTPException:
+        except LedgerError:
             await self.db.rollback()
             raise
         except Exception:
