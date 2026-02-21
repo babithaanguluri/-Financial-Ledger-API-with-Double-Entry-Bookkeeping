@@ -145,6 +145,7 @@ class LedgerService:
 
             transaction.status = TransactionStatus.COMPLETED
             await self.db.commit()
+            logger.info(f"Transfer successful: {transaction_in.amount} {source_account.currency} from {source_account.id} to {dest_account.id} (TX: {transaction.id})")
             
         except HTTPException:
             await self.db.rollback()
