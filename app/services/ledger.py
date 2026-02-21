@@ -3,8 +3,12 @@ from uuid import UUID
 from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
+import logging
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
+
+# Setup Logger
+logger = logging.getLogger(__name__)
 
 from app.models import Account, Transaction, LedgerEntry, AccountStatus, TransactionStatus, EntryType, TransactionType
 from app.schemas import AccountCreate, TransactionCreate
