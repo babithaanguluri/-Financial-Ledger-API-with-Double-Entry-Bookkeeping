@@ -36,6 +36,10 @@ class EntryType(str, enum.Enum):
     CREDIT = "CREDIT"
 
 class Account(Base):
+    """
+    Represents a financial account in the ledger system.
+    Accounts hold currency and are the primary entities for debit/credit operations.
+    """
     __tablename__ = "accounts"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -48,6 +52,10 @@ class Account(Base):
     entries = relationship("LedgerEntry", back_populates="account")
 
 class Transaction(Base):
+    """
+    Represents an atomic financial event (Transfer, Deposit, Withdrawal).
+    A transaction must always have a balanced set of double-entry ledger entries.
+    """
     __tablename__ = "transactions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -63,6 +71,11 @@ class Transaction(Base):
     entries = relationship("LedgerEntry", back_populates="transaction")
 
 class LedgerEntry(Base):
+    """
+    The fundamental unit of the double-entry system.
+    Every entry is either a DEBIT or CREDIT. The sum of all entries for an account
+    represents its current balance.
+    """
     __tablename__ = "ledger_entries"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
