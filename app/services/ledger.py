@@ -325,4 +325,6 @@ class LedgerService:
         """
         query = select(LedgerEntry).where(LedgerEntry.account_id == account_id).order_by(LedgerEntry.created_at)
         result = await self.db.execute(query)
-        return result.scalars().all()
+        entries = result.scalars().all()
+        logger.debug(f"Retrieved {len(entries)} ledger entries for {account_id}")
+        return entries
