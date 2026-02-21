@@ -14,6 +14,9 @@ class LedgerService:
         self.db = db
 
     async def create_account(self, account_in: AccountCreate) -> Account:
+        """
+        Creates a new financial account and persists it to the database.
+        """
         account = Account(
             name=account_in.name,
             currency=account_in.currency,
