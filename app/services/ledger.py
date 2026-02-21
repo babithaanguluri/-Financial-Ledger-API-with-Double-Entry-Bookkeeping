@@ -158,6 +158,8 @@ class LedgerService:
         """
         if transaction_in.type != TransactionType.DEPOSIT:
             raise HTTPException(status_code=400, detail="Invalid transaction type")
+        if transaction_in.amount <= 0:
+            raise HTTPException(status_code=400, detail="Transaction amount must be positive")
         if not transaction_in.destination_account_id:
             raise HTTPException(status_code=400, detail="Destination account required")
         
