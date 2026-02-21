@@ -9,3 +9,7 @@ app.include_router(api_router, prefix="/api")
 @app.get("/")
 async def root():
     return {"message": "Welcome to the Financial Ledger API"}
+
+@app.get("/healthz")
+async def health_check():
+    return {"status": "healthy"}
