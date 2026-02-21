@@ -236,6 +236,8 @@ class LedgerService:
         """
         if transaction_in.type != TransactionType.WITHDRAWAL:
             raise HTTPException(status_code=400, detail="Invalid transaction type")
+        if transaction_in.amount <= 0:
+            raise HTTPException(status_code=400, detail="Transaction amount must be positive")
         if not transaction_in.source_account_id:
              raise HTTPException(status_code=400, detail="Source account required")
         
