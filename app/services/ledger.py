@@ -309,6 +309,6 @@ class LedgerService:
         """
         Returns all ledger entries associated with a specific account ID.
         """
-         query = select(LedgerEntry).where(LedgerEntry.account_id == account_id).order_by(LedgerEntry.created_at)
-         result = await self.db.execute(query)
-         return result.scalars().all()
+        query = select(LedgerEntry).where(LedgerEntry.account_id == account_id).order_by(LedgerEntry.created_at)
+        result = await self.db.execute(query)
+        return result.scalars().all()
